@@ -1,0 +1,28 @@
+---
+- name: Install Nginx and configure it
+  hosts: aws_linux, debian
+  become: true
+
+  vars:
+    packages:
+      common:
+        - nginx
+        - apache2
+        - git
+        - nodejs
+
+  tasks:
+    - name: Installing packages on Amazon Linux
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ packages.common }}"
+      when: ansible_distribution == "Amazon"
+
+    - name: Installing packages on Debian
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop: "{{ packages.common }}"
+      when: ansible_distribution == "Debian"

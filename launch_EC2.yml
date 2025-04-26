@@ -1,0 +1,69 @@
+---
+  - name: Launch EC2 instance from Ansible
+    hosts: localhost
+    gather_facts: no
+    connection: local
+  
+    tasks:
+      - name: Adding SSH access to a security group
+        amazon.aws.ec2_group:
+          name: default
+          description: Security group for EC2 instance
+          region: ap-south-1
+          rules:
+            - proto: tcp
+              from_port: 22
+              to_port: 22
+              cidr_ip: 0.0.0.0/0
+          rules_egress:
+            - proto: all
+              cidr_ip: 0.0.0.0/0
+        register: security_group
+  
+      - name: Launch EC2 instance
+        amazon.aws.ec2_instance:
+          name: Ansible-created-instance
+          key_name: fast-api
+          region: ap-south-1
+          instance_type: t2.micro
+          image_id: ami-0f1dcc636b69a6438
+          count: 1
+          wait: true
+          security_group: "{{ security_group.group_id }}"
+        register: ec2
+  
+      - name: Wait for the instance to be launched
+        wait_for:
+          host: "{{ ec2.instances[0].public_dns_name }}"
+          port: 22
+          delay: 30
+          timeout: 300
+          state: started
+        when: ec2.instances is defined and ec2.instances | length > 0
+  
+      - name: Add EC2 instance to dynamic inventory group
+        add_host:
+          name: "{{ ec2.instances[0].public_dns_name }}"
+          groups: dynamic_hosts
+          ansible_ssh_private_key_file: "~/.ssh/fast-api.pem"
+          ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+          ansible_user: ec2-user
+        when: ec2.instances is defined and ec2.instances | length > 0
+  
+  - name: Configure EC2 Instance
+    hosts: dynamic_hosts
+    become: true
+    gather_facts: true
+  
+    tasks:
+      - name: Install Apache (httpd) using dnf
+        dnf:
+          name: httpd
+          state: present
+  
+      - name: Start and enable Apache service
+        service:
+          name: httpd
+          state: started
+          enabled: yes
+  

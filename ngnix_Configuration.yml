@@ -1,0 +1,58 @@
+---
+- name: Install Nginx and configure it
+  hosts: aws_linux, debian
+  become: true
+
+  vars:
+    package_name:
+      Debian: apache2
+      Amazon: httpd
+
+  tasks:
+    - name: Print OS Version
+      debug:
+        msg: "This OS is {{ ansible_distribution }}"
+
+    - name: Installing apache on Amazon Linux
+      dnf:
+        name: "{{ package_name['Amazon'] }}"
+        state: present
+      when: ansible_distribution == "Amazon"
+
+    - name: Installing apache on Debian
+      apt:
+        name: "{{ package_name['Debian'] }}"
+        state: present
+        update_cache: yes
+      when: ansible_distribution == "Debian"
+
+    - name: Install Nginx (RedHat-based)
+      dnf:
+        name: nginx
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Install Nginx (Debian-based)
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install cronie (RedHat-based)
+      dnf:
+        name: cronie
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Install cron (Debian-based)
+      apt:
+        name: cron
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Start and enable Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: true
