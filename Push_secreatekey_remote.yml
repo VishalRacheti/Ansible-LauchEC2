@@ -1,0 +1,15 @@
+---
+- name: Copying key from local to remote machine
+  hosts: aws_linux  # It should be 'hosts' (not 'host')
+  become: yes  # Sudo permission
+  vars:
+    app_name: devops
+
+  vars_files: 
+    - "secret.yml"
+
+  tasks:
+    - name: Copy db password from local to remote
+      copy: 
+        content: "{{ db_password }}"
+        dest: "/etc/{{ app_name }}_db_pass.txt"
